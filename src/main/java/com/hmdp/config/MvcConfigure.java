@@ -10,7 +10,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.annotation.Resource;
 
-@Configuration
+
 public class MvcConfigure implements WebMvcConfigurer {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
