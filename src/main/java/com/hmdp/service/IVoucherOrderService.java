@@ -15,4 +15,6 @@ import com.baomidou.mybatisplus.extension.service.IService;
 public interface IVoucherOrderService extends IService<VoucherOrder> {
 
     Result secKill(Long voucherId);
+
+    Result limitNum(Long voucherId);
 }
