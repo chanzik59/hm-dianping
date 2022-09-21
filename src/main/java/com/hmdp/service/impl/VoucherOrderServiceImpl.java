@@ -9,11 +9,11 @@ import com.hmdp.mapper.VoucherOrderMapper;
 import com.hmdp.service.ISeckillVoucherService;
 import com.hmdp.service.IVoucherOrderService;
 import com.hmdp.utils.RedisIDMaker;
-import com.hmdp.utils.RedisLock;
 import com.hmdp.utils.UserHolder;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,7 +38,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private RedisIDMaker redisIDMaker;
 
     @Resource
-    private StringRedisTemplate stringRedisTemplate;
+    private RedissonClient redissonClient;
 
     @Override
     public Result secKill(Long voucherId) {
@@ -50,9 +50,9 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             return Result.fail("库存不足");
         }
         UserDTO user = UserHolder.getUser();
-        RedisLock redisLock = new RedisLock(user.getId().toString(), stringRedisTemplate);
+        RLock lock = redissonClient.getLock("redis:lock:" + user.getId().toString());
         //使用用户id常量池对象加锁 ，事务结束解锁
-        if (!redisLock.tryLock(1L)) {
+        if (!lock.tryLock()) {
             return Result.fail("重复下单");
         }
         try {
@@ -62,7 +62,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         } catch (Exception e) {
             log.error("中断异常", e);
         } finally {
-            redisLock.unlock();
+            lock.unlock();
         }
         return Result.fail("下单失败");
     }
