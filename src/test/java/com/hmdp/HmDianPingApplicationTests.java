@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
@@ -38,51 +39,20 @@ class HmDianPingApplicationTests {
     @Resource
     StringRedisTemplate stringRedisTemplate;
 
+
+    @Value("${spring.redis.host}")
+    private String redisHost;
+
     private ExecutorService executorService = Executors.newFixedThreadPool(500);
 
 
     @Test
     void test() throws InterruptedException {
 
-       /* Voucher voucher = mapper.selectById(1);
-        String s = JSONUtil.toJsonStr(voucher);
-        System.out.println(s);*/
-        System.out.println(LocalDateTime.now());
+        System.out.println(redisHost);
     }
 
-    private static final ExecutorService ex = Executors.newSingleThreadExecutor();
 
-
-    public static void main(String[] args) {
-
-
-        BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(10);
-
-
-        ex.submit(() -> {
-            while (true) {
-                try {
-                    Integer take = queue.take();
-                    System.out.println(take);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-        });
-
-
-        for (int i = 0; i < 100; i++) {
-            queue.add(i);
-            try {
-                Thread.sleep(0);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-
-    }
 
 
 }
