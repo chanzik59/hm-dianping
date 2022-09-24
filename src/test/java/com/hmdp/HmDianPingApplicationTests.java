@@ -47,7 +47,9 @@ class HmDianPingApplicationTests {
     @Test
     void test() throws InterruptedException {
 
-        Timestamp timestamp = new Timestamp(System.currentTimeMillis());
+       /* Voucher voucher = mapper.selectById(1);
+        String s = JSONUtil.toJsonStr(voucher);
+        System.out.println(s);*/
         System.out.println(LocalDateTime.now());
     }
 
