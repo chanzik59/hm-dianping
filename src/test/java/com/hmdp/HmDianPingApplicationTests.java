@@ -1,8 +1,5 @@
 package com.hmdp;
 
-import cn.hutool.json.JSONUtil;
-import com.hmdp.entity.Shop;
-import com.hmdp.entity.Voucher;
 import com.hmdp.mapper.VoucherMapper;
 import com.hmdp.service.impl.ShopServiceImpl;
 import com.hmdp.service.impl.VoucherServiceImpl;
@@ -15,9 +12,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import javax.annotation.Resource;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.util.Date;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -51,6 +48,40 @@ class HmDianPingApplicationTests {
         String s = JSONUtil.toJsonStr(voucher);
         System.out.println(s);*/
         System.out.println(LocalDateTime.now());
+    }
+
+    private static final ExecutorService ex = Executors.newSingleThreadExecutor();
+
+
+    public static void main(String[] args) {
+
+
+        BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(10);
+
+
+        ex.submit(() -> {
+            while (true) {
+                try {
+                    Integer take = queue.take();
+                    System.out.println(take);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+        });
+
+
+        for (int i = 0; i < 100; i++) {
+            queue.add(i);
+            try {
+                Thread.sleep(0);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
     }
 
 
