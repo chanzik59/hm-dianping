@@ -25,3 +25,7 @@ mybatis-plus:
 logging:
   level:
     com.hmdp: debug
+
+#nginx存放地址
+nginx:
+  upload: E:\\workspace\\nginx-1.18.0

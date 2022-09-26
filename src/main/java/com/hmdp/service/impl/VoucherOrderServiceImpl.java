@@ -18,7 +18,6 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.types.RedisClientInfo;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +27,7 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -84,28 +84,28 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     private void init() {
         ORDER_EXECUTOR.submit(() -> {
             while (true) {
-                List<RedisClientInfo> clientList = stringRedisTemplate.getClientList();
-                System.out.println(clientList);
-                List<MapRecord<String, Object, Object>> mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)), StreamOffset.create("stream.orders", ReadOffset.lastConsumed()));
-                if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
-                    continue;
-                }
-                MapRecord<String, Object, Object> entries = mapRecords.get(0);
-                VoucherOrder voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
-                RLock lock = redissonClient.getLock("redis:lock:" + voucherOrder.getUserId().toString());
+                RLock lock = null;
                 try {
+                    List<MapRecord<String, Object, Object>> mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)), StreamOffset.create("stream.orders", ReadOffset.lastConsumed()));
+                    if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
+                        continue;
+                    }
+                    MapRecord<String, Object, Object> entries = mapRecords.get(0);
+                    VoucherOrder voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
+                    lock = redissonClient.getLock("redis:lock:" + voucherOrder.getUserId().toString());
+
                     //使用用户id常量池对象加锁 ，事务结束解锁
                     if (!lock.tryLock()) {
                         log.error("重复下单");
                         return;
                     }
-
                     voucherOrderService.limitNum(voucherOrder);
                     stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", entries.getId());
                 } catch (Exception e) {
                     while (true) {
-                        mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1), StreamOffset.create("stream.orders", ReadOffset.from("0")));
-                        voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
+                        List<MapRecord<String, Object, Object>> mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1), StreamOffset.create("stream.orders", ReadOffset.from("0")));
+                        MapRecord<String, Object, Object> entries = mapRecords.get(0);
+                        VoucherOrder voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
                         if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
                             break;
                         }
@@ -113,7 +113,7 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
                         stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", entries.getId());
                     }
                 } finally {
-                    lock.unlock();
+                    Optional.ofNullable(lock).ifPresent(RLock::unlock);
                 }
 
             }
