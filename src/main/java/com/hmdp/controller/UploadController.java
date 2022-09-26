@@ -43,7 +43,7 @@ public class UploadController {
 
     @GetMapping("/blog/delete")
     public Result deleteBlogImg(@RequestParam("name") String filename) {
-        File file = new File(SystemConstants.IMAGE_UPLOAD_DIR, filename);
+        File file = new File(uploadNginx + SystemConstants.IMAGE_UPLOAD_DIR, filename);
         if (file.isDirectory()) {
             return Result.fail("错误的文件名称");
         }
@@ -60,7 +60,7 @@ public class UploadController {
         int d1 = hash & 0xF;
         int d2 = (hash >> 4) & 0xF;
         // 判断目录是否存在
-        File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
+        File dir = new File(uploadNginx + SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
         if (!dir.exists()) {
             dir.mkdirs();
         }
