@@ -4,19 +4,27 @@
 --- DateTime: 2022/9/23 22:29
 ---
 
-local stockKey='seckill:stock:' .. ARGV[1]
+local stockKey = 'seckill:stock:' .. ARGV[1]
 
-local orderKey='seckill:order:' .. ARGV[1]
+local orderKey = 'seckill:order:' .. ARGV[1]
 
+local userId = ARGV[2]
 
-if(tonumber(redis.call('get',stockKey)) <= 0) then
+local voucherId = ARGV[1]
+
+local orderId = ARGV[3]
+--判断库存是否为零
+if (tonumber(redis.call('get', stockKey)) <= 0) then
     return 1
 end
-
-if(redis.call('sismember',orderKey,ARGV[2])==1) then
+--判断是否重复下单
+if (redis.call('sismember', orderKey, userId) == 1) then
     return 2
 end
-
-redis.call('incrby',stockKey,-1)
-redis.call('sadd',orderKey,ARGV[2])
+--扣减库存
+redis.call('incrby', stockKey, -1)
+--设置订单
+redis.call('sadd', orderKey, userId)
+--把订单信息设置进stream 消费组
+redis.call('xadd', 'stream.orders', '*', 'voucherId', voucherId, 'userId', userId, 'id', orderId)
 return 0

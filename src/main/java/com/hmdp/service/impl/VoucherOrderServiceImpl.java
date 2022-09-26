@@ -1,5 +1,6 @@
 package com.hmdp.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
 import com.hmdp.dto.UserDTO;
@@ -14,6 +15,7 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.redis.connection.stream.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -21,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
+import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -79,15 +84,34 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
         ORDER_EXECUTOR.submit(() -> {
             try {
                 while (true) {
-                    VoucherOrder voucher = secKillQueue.take();
-                    RLock lock = redissonClient.getLock("redis:lock:" + voucher.getUserId().toString());
+                    List<MapRecord<String, Object, Object>> mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)), StreamOffset.create("stream.orders", ReadOffset.lastConsumed()));
+
+                    if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
+                        continue;
+                    }
+                    MapRecord<String, Object, Object> entries = mapRecords.get(0);
+                    VoucherOrder voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
+                    RLock lock = redissonClient.getLock("redis:lock:" + voucherOrder.getUserId().toString());
                     try {
                         //使用用户id常量池对象加锁 ，事务结束解锁
                         if (!lock.tryLock()) {
                             log.error("重复下单");
                             return;
                         }
-                        voucherOrderService.limitNum(voucher);
+
+                        voucherOrderService.limitNum(voucherOrder);
+                        stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", entries.getId());
+                    } catch (Exception e) {
+                        while (true) {
+                            mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1), StreamOffset.create("stream.orders", ReadOffset.from("0")));
+                            voucherOrder = BeanUtil.toBean(entries.getValue(), VoucherOrder.class);
+                            if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
+                                break;
+                            }
+                            voucherOrderService.limitNum(voucherOrder);
+                            stringRedisTemplate.opsForStream().acknowledge("stream.orders", "g1", entries.getId());
+                            Thread.sleep(200);
+                        }
                     } finally {
                         lock.unlock();
                     }
@@ -103,19 +127,13 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
     @Override
     public Result secKill(Long voucherId) {
         UserDTO user = UserHolder.getUser();
-        Long result = stringRedisTemplate.execute(SEC_KILL_SCRIPT, Collections.emptyList(), voucherId.toString(), user.getId().toString());
+        long orderId = redisIDMaker.nextId("voucher:order");
+        Long result = stringRedisTemplate.execute(SEC_KILL_SCRIPT, Collections.emptyList(), voucherId.toString(), user.getId().toString(), String.valueOf(orderId));
         voucherOrderService = (IVoucherOrderService) AopContext.currentProxy();
         if (result != 0) {
             return Result.fail(result == 1 ? "库存不足" : "不能重复下单");
 
         }
-        VoucherOrder voucherOrder = new VoucherOrder();
-        long orderId = redisIDMaker.nextId("voucher:order");
-        voucherOrder.setId(orderId);
-        voucherOrder.setVoucherId(voucherId);
-        voucherOrder.setUserId(UserHolder.getUser().getId());
-        secKillQueue.add(voucherOrder);
-        //获取到代理对象调用事务
 
         return Result.ok(orderId);
     }
