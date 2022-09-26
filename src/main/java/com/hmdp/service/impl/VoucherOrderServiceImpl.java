@@ -85,7 +85,6 @@ public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, Vou
             try {
                 while (true) {
                     List<MapRecord<String, Object, Object>> mapRecords = stringRedisTemplate.opsForStream().read(Consumer.from("g1", "c1"), StreamReadOptions.empty().count(1).block(Duration.ofSeconds(2)), StreamOffset.create("stream.orders", ReadOffset.lastConsumed()));
-
                     if (Objects.isNull(mapRecords) || mapRecords.isEmpty()) {
                         continue;
                     }
