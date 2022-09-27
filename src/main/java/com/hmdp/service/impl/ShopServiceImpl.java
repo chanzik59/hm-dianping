@@ -35,12 +35,14 @@ public class ShopServiceImpl extends ServiceImpl<ShopMapper, Shop> implements IS
 
     @Override
     public Result queryById(Long id) {
-        Shop shopCacheLogicalExpire = cacheClient.getShopCacheLogicalExpire(RedisConstants.CACHE_SHOP_KEY, id, Shop.class, 30L, TimeUnit.SECONDS, this::getById);
+//        Shop shopCache = cacheClient.getShopCacheLogicalExpire(RedisConstants.CACHE_SHOP_KEY, id, Shop.class, 30L, TimeUnit.SECONDS, this::getById);
 
-        if (Objects.isNull(shopCacheLogicalExpire)) {
+        Shop shopCache = cacheClient.getShopCache(RedisConstants.CACHE_SHOP_KEY, id, Shop.class, 30L, TimeUnit.SECONDS, this::getById);
+
+        if (Objects.isNull(shopCache)) {
             return Result.fail("商铺不存在");
         }
-        return Result.ok(shopCacheLogicalExpire);
+        return Result.ok(shopCache);
     }
 
 
