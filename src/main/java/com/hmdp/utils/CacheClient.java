@@ -65,7 +65,7 @@ public class CacheClient {
      * @param <R>
      * @return
      */
-    private <T, R> R getShopCache(String prefix, T id, Class<R> tClass, Function<T, R> function, Long time, TimeUnit timeUnit) {
+    public <T, R> R getShopCache(String prefix, T id, Class<R> tClass, Long time, TimeUnit timeUnit, Function<T, R> function) {
         String dataJson = stringRedisTemplate.opsForValue().get(prefix + id);
         if (StrUtil.isNotBlank(dataJson)) {
             return JSONUtil.toBean(dataJson, tClass);
@@ -84,6 +84,19 @@ public class CacheClient {
     }
 
 
+    /**
+     * 缓存击穿解决 逻辑过期
+     *
+     * @param prefix
+     * @param id
+     * @param rClass
+     * @param time
+     * @param timeUnit
+     * @param function
+     * @param <R>
+     * @param <T>
+     * @return
+     */
     public <R, T> R getShopCacheLogicalExpire(String prefix, T id, Class<R> rClass, Long time, TimeUnit timeUnit, Function<T, R> function) {
         String dataJson = stringRedisTemplate.opsForValue().get(prefix + id);
         if (StrUtil.isBlank(dataJson)) {
