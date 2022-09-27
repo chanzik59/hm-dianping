@@ -52,6 +52,7 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
 
     /**
      * 给博客设置用户信息
+     *
      * @param blog
      */
     private void setBlogUserInfo(Blog blog) {
