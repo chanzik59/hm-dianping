@@ -39,7 +39,12 @@ public class FollowController {
         return followService.follow(id, follow);
     }
 
-
+    /**
+     * 查询是否关注该用户
+     *
+     * @param id
+     * @return
+     */
 
     @GetMapping("/followOrNot/{id}")
     public Result isFollow(@PathVariable("id") Long id) {

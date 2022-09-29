@@ -8,7 +8,14 @@ import com.hmdp.entity.Blog;
 import com.hmdp.service.IBlogService;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Resource;
 import java.util.List;
@@ -42,7 +49,7 @@ public class BlogController {
 
     @PutMapping("/like/{id}")
     public Result likeBlog(@PathVariable("id") Long id) {
-        return   blogService.likeBlogById(id);
+        return blogService.likeBlogById(id);
 
     }
 
@@ -75,7 +82,21 @@ public class BlogController {
 
     @GetMapping("/likes/{id}")
     public Result likesBlog(@PathVariable("id") Long id) {
-        return   blogService.queryLikesById(id);
+        return blogService.queryLikesById(id);
+
+    }
+
+    /**
+     * 查询用户发表的博客
+     *
+     * @param current
+     * @param id
+     * @return
+     */
+    @GetMapping("/of/user")
+    public Result queryBlogOfUser(@RequestParam(value = "current", defaultValue = "1") Integer current, @RequestParam("id") Long id) {
+        Page<Blog> page = blogService.query().eq("user_id", id).page(new Page<>(current, SystemConstants.MAX_PAGE_SIZE));
+        return Result.ok(page.getRecords());
 
     }
 }
