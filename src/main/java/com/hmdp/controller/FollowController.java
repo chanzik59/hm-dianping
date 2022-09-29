@@ -3,6 +3,7 @@ package com.hmdp.controller;
 
 import com.hmdp.dto.Result;
 import com.hmdp.service.IFollowService;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -49,5 +50,12 @@ public class FollowController {
     @GetMapping("/followOrNot/{id}")
     public Result isFollow(@PathVariable("id") Long id) {
         return followService.isFollow(id);
+    }
+
+
+
+    @GetMapping("/follow/common/{id}")
+    public Result followCommon(@PathVariable("id") Long id){
+        return followService.followCommons(id);
     }
 }
