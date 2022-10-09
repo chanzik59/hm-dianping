@@ -45,4 +45,11 @@ public interface IBlogService extends IService<Blog> {
      * @return
      */
     Result queryLikesById(Long id);
+
+    /**
+     * 保存博客并且推送关注收件箱
+     * @param blog
+     * @return
+     */
+    Result saveBlog(Blog blog);
 }

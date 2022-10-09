@@ -35,8 +35,8 @@ public class FollowController {
      * @param follow
      * @return
      */
-    @PutMapping("/{id}")
-    public Result followUser(@PathVariable("id") Long id, Boolean follow) {
+    @PutMapping("/{id}/{follow}")
+    public Result followUser(@PathVariable("id") Long id,@PathVariable("follow") Boolean follow) {
         return followService.follow(id, follow);
     }
 
@@ -47,14 +47,14 @@ public class FollowController {
      * @return
      */
 
-    @GetMapping("/followOrNot/{id}")
+    @GetMapping("/or/not/{id}")
     public Result isFollow(@PathVariable("id") Long id) {
         return followService.isFollow(id);
     }
 
 
 
-    @GetMapping("/follow/common/{id}")
+    @GetMapping("/common/{id}")
     public Result followCommon(@PathVariable("id") Long id){
         return followService.followCommons(id);
     }
