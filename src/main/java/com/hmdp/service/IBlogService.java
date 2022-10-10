@@ -48,8 +48,18 @@ public interface IBlogService extends IService<Blog> {
 
     /**
      * 保存博客并且推送关注收件箱
+     *
      * @param blog
      * @return
      */
     Result saveBlog(Blog blog);
+
+    /**
+     * 滚动查询关注推送
+     *
+     * @param minTime
+     * @param offset
+     * @return
+     */
+    Result followBlogs(Long minTime, Integer offset);
 }

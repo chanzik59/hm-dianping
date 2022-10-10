@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.hmdp.dto.Result;
+import com.hmdp.dto.ScrollResult;
 import com.hmdp.dto.UserDTO;
 import com.hmdp.entity.Blog;
 import com.hmdp.entity.Follow;
@@ -17,14 +18,12 @@ import com.hmdp.utils.RedisConstants;
 import com.hmdp.utils.SystemConstants;
 import com.hmdp.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import javax.annotation.Resource;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -125,15 +124,45 @@ public class BlogServiceImpl extends ServiceImpl<BlogMapper, Blog> implements IB
         blog.setUserId(user.getId());
         // 保存探店博文
         boolean success = save(blog);
-        if(!success){
-            return  Result.fail("博客发布失败");
+        if (!success) {
+            return Result.fail("博客发布失败");
         }
         List<Follow> follows = followService.query().eq("follow_user_id", user.getId()).list();
         for (Follow follow : follows) {
-            stringRedisTemplate.opsForZSet().add(RedisConstants.FEED_KEY+follow.getUserId(),blog.getId().toString(),System.currentTimeMillis());
+            stringRedisTemplate.opsForZSet().add(RedisConstants.FEED_KEY + follow.getUserId(), blog.getId().toString(), System.currentTimeMillis());
         }
         // 返回id
         return Result.ok(blog.getId());
+    }
+
+    @Override
+    public Result followBlogs(Long max, Integer offset) {
+
+        Long userId = UserHolder.getUser().getId();
+
+        Set<ZSetOperations.TypedTuple<String>> tuples = stringRedisTemplate.opsForZSet().reverseRangeByScoreWithScores(RedisConstants.FEED_KEY + userId, 0, max, offset, 5);
+        if (tuples == null || tuples.isEmpty()) {
+            return Result.ok();
+        }
+        offset = 1;
+        max = 0L;
+        LinkedList<Long> blogIds = new LinkedList<>();
+        for (ZSetOperations.TypedTuple<String> tuple : tuples) {
+            long minTime = tuple.getScore().longValue();
+            blogIds.add(Long.valueOf(tuple.getValue()));
+            if (minTime == max) {
+                offset++;
+            } else {
+                max = minTime;
+                offset = 1;
+            }
+        }
+        List<Blog> blogs = query().in("id", blogIds).last("ORDER by FIELD(id ," + StrUtil.join(",", blogIds) + ")").list();
+        ScrollResult<Blog> blogScrollResult = new ScrollResult<>();
+        blogScrollResult.setList(blogs);
+        blogScrollResult.setOffset(offset);
+        blogScrollResult.setMinTime(max);
+        return Result.ok(blogScrollResult);
     }
 
     /**
