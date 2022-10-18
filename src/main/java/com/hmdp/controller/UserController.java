@@ -111,4 +111,22 @@ public class UserController {
         UserDTO userDTO = BeanUtil.copyProperties(user, UserDTO.class);
         return Result.ok(userDTO);
     }
+
+    /**
+     * 当天签到功能
+     * @return
+     */
+    @PostMapping("sign")
+    public Result sign(){
+        return userService.sign();
+    }
+
+    /**
+     * 统计截至今天连续签到次数
+     * @return
+     */
+    @GetMapping("sign/count")
+    public Result signCount(){
+        return userService.signCount();
+    }
 }
